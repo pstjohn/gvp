@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "gvp"
+version = "0.1.0"
+description = ""
+authors = ["Peter St. John <peterc.stjohn@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+torch = "1.12.1"
+torch-geometric = "^2.1.0"
+numpy = "^1.23.4"
+ProDy = "^2.2.0"
+torch-sparse = "^0.6.15"
+torch-scatter = "^2.0.9"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
