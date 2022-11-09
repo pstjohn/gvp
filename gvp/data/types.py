@@ -1,36 +1,33 @@
 from enum import Enum, auto
-from typing import Iterable, Protocol
+from typing import List
 
-import numpy as np
-
-
-class Atom(Protocol):
-    def getCoords(self) -> np.ndarray:
-        ...
+from pydantic import BaseModel
 
 
-class AtomGroup(Protocol):
-    def iterAtoms(self) -> Iterable[Atom]:
-        ...
+class LookupEnum(Enum):
+    """https://github.com/pydantic/pydantic/issues/598#issuecomment-503032706"""
 
-    def getNames(self) -> Iterable[str]:
-        ...
+    @classmethod
+    def __get_validators__(cls):
+        cls.lookup = {v: k.value for v, k in cls.__members__.items()}
+        yield cls.validate
 
-    def getResnames(self) -> Iterable[str]:
-        ...
+    @classmethod
+    def validate(cls, v):
+        try:
+            return cls.lookup[v]
+        except KeyError:
+            raise ValueError("invalid value")
 
-    def getResindices(self) -> np.ndarray:
-        ...
 
-
-class AtomTypes(Enum):
+class AtomType(LookupEnum):
     N = 1
     CA = 2
     C = 3
     O = 4  # noqa: E741
 
 
-class ResidueTypes(Enum):
+class ResidueType(LookupEnum):
     ALA = auto()
     ARG = auto()
     ASN = auto()
@@ -51,3 +48,16 @@ class ResidueTypes(Enum):
     TRP = auto()
     TYR = auto()
     VAL = auto()
+
+
+class Atom(BaseModel):
+    pos: List[float]
+    atom_type: AtomType
+    residue_type: ResidueType
+    residue_index: int
+
+    class Config:
+        use_enum_values = True
+
+
+Protein = List[Atom]

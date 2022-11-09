@@ -9,9 +9,10 @@ python = "^3.8"
 torch = "1.12.1"
 torch-geometric = "^2.1.0"
 numpy = "^1.23.4"
-ProDy = "^2.2.0"
 torch-sparse = "^0.6.15"
 torch-scatter = "^2.0.9"
+biotite = "^0.35.0"
+pydantic = "^1.10.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
