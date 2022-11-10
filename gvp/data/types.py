@@ -1,33 +1,21 @@
-from enum import Enum, auto
-from typing import List
-
-from pydantic import BaseModel
+from enum import Enum, EnumMeta, IntEnum, auto
 
 
-class LookupEnum(Enum):
-    """https://github.com/pydantic/pydantic/issues/598#issuecomment-503032706"""
-
-    @classmethod
-    def __get_validators__(cls):
-        cls.lookup = {v: k.value for v, k in cls.__members__.items()}
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
+class DefaultEnumMeta(EnumMeta):
+    def __getitem__(cls, name: str):
         try:
-            return cls.lookup[v]
+            return super().__getitem__(name)  # type: ignore
         except KeyError:
-            raise ValueError("invalid value")
+            return cls.UNK  # type: ignore
 
 
-class AtomType(LookupEnum):
+class AtomType(IntEnum):
     N = 1
     CA = 2
     C = 3
-    O = 4  # noqa: E741
 
 
-class ResidueType(LookupEnum):
+class ResidueType(Enum, metaclass=DefaultEnumMeta):
     ALA = auto()
     ARG = auto()
     ASN = auto()
@@ -48,16 +36,4 @@ class ResidueType(LookupEnum):
     TRP = auto()
     TYR = auto()
     VAL = auto()
-
-
-class Atom(BaseModel):
-    pos: List[float]
-    atom_type: AtomType
-    residue_type: ResidueType
-    residue_index: int
-
-    class Config:
-        use_enum_values = True
-
-
-Protein = List[Atom]
+    UNK = auto()
