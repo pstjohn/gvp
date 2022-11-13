@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
 
 from gvp.nn import vector
-from gvp.nn.gvp import GVP
+from gvp.nn.gvp import GVP, GVPVectorGate
 from gvp.typing import ActivationFnArgs, VectorTuple, VectorTupleDim
 
 
@@ -21,6 +21,7 @@ def build_gvp_module_list(
     si, vi = in_dims
     se, ve = edge_dims
     gvp_in_dims = (2 * si + se, 2 * vi + ve)
+    gvp_class = GVPVectorGate if vector_gate else GVP
 
     module_list = []
 
@@ -34,11 +35,10 @@ def build_gvp_module_list(
         layer_in_dims = gvp_in_dims if i == 0 else out_dims
 
         module_list.append(
-            GVP(
+            gvp_class(
                 layer_in_dims,
                 out_dims,
                 activations=activations,
-                vector_gate=vector_gate,
             )
         )
 
@@ -93,7 +93,8 @@ class GVPConv(MessagePassing):
         self,
         node_s: torch.Tensor,
         node_v: torch.Tensor,
-        edge_attr: VectorTuple,
+        edge_s: torch.Tensor,
+        edge_v: torch.Tensor,
         edge_index: torch.Tensor,
     ) -> VectorTuple:
         """
@@ -105,7 +106,8 @@ class GVPConv(MessagePassing):
             edge_index,
             s=node_s,
             v=node_v.reshape(node_v.shape[0], 3 * node_v.shape[1]),
-            edge_attr=edge_attr,
+            edge_s=edge_s,
+            edge_v=edge_v,
         )
         return vector.split(message, self.out_dims[1])
 
@@ -115,11 +117,12 @@ class GVPConv(MessagePassing):
         v_i: torch.Tensor,
         s_j: torch.Tensor,
         v_j: torch.Tensor,
-        edge_attr,
+        edge_s: torch.Tensor,
+        edge_v: torch.Tensor,
     ):
         v_j = v_j.view(v_j.shape[0], v_j.shape[1] // 3, 3)
         v_i = v_i.view(v_i.shape[0], v_i.shape[1] // 3, 3)
-        s, v = vector.tuple_cat((s_j, v_j), edge_attr, (s_i, v_i))
+        s, v = vector.tuple_cat((s_j, v_j), (edge_s, edge_v), (s_i, v_i))
 
         for layer in self.module_list:
             s, v = layer(s, v)

@@ -27,21 +27,23 @@ class GVP(nn.Module):
         out_dims: VectorTupleDim,
         h_dim: Optional[int] = None,
         activations: ActivationFnArgs = (F.relu, torch.sigmoid),
-        vector_gate: bool = False,
     ):
         super(GVP, self).__init__()
         self.in_dims = in_dims
         self.out_dims = out_dims
-        self.vector_gate = vector_gate
         self.h_dim = h_dim or max(in_dims[1], out_dims[1])
 
         self.wh = nn.Linear(in_dims[1], self.h_dim, bias=False)
         self.ws = nn.Linear(self.h_dim + in_dims[0], out_dims[0])
         self.wv = nn.Linear(self.h_dim, out_dims[1], bias=False)
-        if self.vector_gate:
-            self.wsv = nn.Linear(*out_dims)
 
         self.scalar_act, self.vector_act = activations
+
+    def vector_nonlinearity(self, s: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+        if self.vector_act:
+            return v * self.vector_act(norm_no_nan(v, axis=-1, keepdims=True))
+        else:
+            return v
 
     def forward(self, s: torch.Tensor, v: torch.Tensor) -> VectorTuple:
         """Forward pass of the geometric vector perceptron layer
@@ -65,19 +67,23 @@ class GVP(nn.Module):
 
         v = self.wv(vh)
         v = torch.transpose(v, -1, -2)
-
-        # TODO: does it make more sense to do handle this split via subclassing?vi
-        if self.vector_gate:
-            if self.vector_act:
-                gate = self.wsv(self.vector_act(s))
-            else:
-                gate = self.wsv(s)
-            v = v * torch.sigmoid(gate).unsqueeze(-1)
-
-        elif self.vector_act:
-            v = v * self.vector_act(norm_no_nan(v, axis=-1, keepdims=True))
+        v = self.vector_nonlinearity(s, v)
 
         if self.scalar_act:
             s = self.scalar_act(s)
 
         return s, v
+
+
+class GVPVectorGate(GVP):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.wsv = nn.Linear(*self.out_dims)
+
+    def vector_nonlinearity(self, s: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+        if self.vector_act:
+            gate = self.wsv(self.vector_act(s))
+        else:
+            gate = self.wsv(s)
+
+        return v * torch.sigmoid(gate).unsqueeze(-1)

@@ -2,7 +2,7 @@ import pytest
 import torch
 from scipy.spatial.transform import Rotation
 
-from gvp.nn.gvp import GVP
+from gvp.nn.gvp import GVP, GVPVectorGate
 from gvp.nn.gvp_conv import GVPConv
 from gvp.test.data import rand_vector_tuple
 
@@ -24,7 +24,8 @@ def test_gvp(rotation, v_in, v_out, vector_gate):
     num_nodes = 10
     s, v = rand_vector_tuple(num_nodes, node_dim_in)
 
-    model = GVP(node_dim_in, node_dim_out, vector_gate=vector_gate).to(device).eval()
+    gvp_class = GVPVectorGate if vector_gate else GVP
+    model = gvp_class(node_dim_in, node_dim_out).to(device).eval()
 
     with torch.no_grad():
         s_out, v_out = model(s, v)
@@ -70,7 +71,7 @@ def test_gvp_conv(rotation, v_in, v_out, vector_gate):
     )
 
     with torch.no_grad():
-        s_out, v_out = model(node_s, node_v, (edge_s, edge_v), edge_index)
+        s_out, v_out = model(node_s, node_v, edge_s, edge_v, edge_index)
 
     assert s_out.shape == (num_nodes, node_dim_out[0])
     assert v_out.shape == (num_nodes, node_dim_out[1], 3)
@@ -81,7 +82,7 @@ def test_gvp_conv(rotation, v_in, v_out, vector_gate):
         edge_v_rot = edge_v @ rotation
 
         s_out_prime, v_out_prime = model(
-            node_s, node_v_rot, (edge_s, edge_v_rot), edge_index
+            node_s, node_v_rot, edge_s, edge_v_rot, edge_index
         )
 
         assert torch.allclose(s_out, s_out_prime, atol=1e-5, rtol=1e-4)
