@@ -40,6 +40,21 @@ class GVP(nn.Module):
         self.scalar_act, self.vector_act = activations
 
     def vector_nonlinearity(self, s: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+        """Perform a nonlinear update of the vector state in a rotationally equivariant
+        fashion.
+
+        Parameters
+        ----------
+        s : torch.Tensor
+            scalar features, only used in the vector gate variant
+        v : torch.Tensor
+            input vector features
+
+        Returns
+        -------
+        torch.Tensor
+            output vector features
+        """
         if self.vector_act:
             return v * self.vector_act(norm_no_nan(v, axis=-1, keepdims=True))
         else:
@@ -77,6 +92,9 @@ class GVP(nn.Module):
 
 class GVPVectorGate(GVP):
     def __init__(self, *args, **kwargs) -> None:
+        """Modification of the GVP with vector gating as described in Jing et al.,
+        “Equivariant Graph Neural Networks for 3D Macromolecular Structure.”
+        """
         super().__init__(*args, **kwargs)
         self.wsv = nn.Linear(*self.out_dims)
 
