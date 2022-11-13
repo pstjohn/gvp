@@ -1,4 +1,4 @@
-from gvp.data.types import ResidueType
+from gvp.data.residue import ResidueType
 
 
 def test_residue():

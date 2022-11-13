@@ -3,12 +3,12 @@ import io
 from pathlib import Path
 from typing import Union
 
-import torch  # type: ignore
+import torch
 import torch_geometric.data
 from biotite.structure import AtomArray, AtomArrayStack, filter_backbone
 from biotite.structure.io.mmtf import MMTFFile, get_structure  # type: ignore
 
-from gvp.data.types import AtomType, ResidueType
+from gvp.data.residue import AtomType, ResidueType
 
 
 def load_mmtf_file(filename: Union[str, Path]) -> AtomArrayStack:
@@ -77,19 +77,3 @@ def convert_to_pyg(atom_stack: AtomArrayStack) -> torch_geometric.data.Data:
         residue_types=residue_types,
         residue_indices=residue_indices,
     )
-
-
-# def as_protein(structure: AtomArrayStack) -> Protein:
-#     protein = []
-#     for item in structure:
-#         for atom in item[filter_backbone(item)]:  # type: ignore
-#             protein.append(
-#                 Atom(
-#                     pos=atom.coord.tolist(),
-#                     atom_type=atom.atom_name,
-#                     residue_type=atom.res_name,
-#                     residue_index=atom.res_id,
-#                 )
-#             )
-
-#     return protein

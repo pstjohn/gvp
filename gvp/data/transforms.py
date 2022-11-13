@@ -65,9 +65,7 @@ class GVPTransfomer(BaseTransform):
         assert data.edge_attr.shape[-1] == 4
         edge_s = data.edge_attr[:, 3].unsqueeze(-1)
         edge_v = data.edge_attr[:, :3].unsqueeze(-2)
-        del data["edge_attr"]
-        data["edge_s"] = edge_s
-        data["edge_v"] = edge_v
+        data["edge_attr"] = (edge_s, edge_v)
 
         return data
 
