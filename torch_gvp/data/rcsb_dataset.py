@@ -47,9 +47,9 @@ def process_item(
     torch.save(data, Path(processed_dir, f"prot-{name}.pt"))
 
 
-def size_filter(data: Data, max_num_nodes: int = 10000) -> bool:
+def size_filter(data: Data, max_num_nodes: int = 10000, min_num_nodes: int = 1) -> bool:
     if data.num_nodes:
-        return data.num_nodes < max_num_nodes
+        return min_num_nodes <= data.num_nodes <= max_num_nodes
     else:
         return False
 
@@ -90,7 +90,9 @@ class RCSBDataset(Dataset):
 
     @property
     def processed_file_names(self) -> List[str]:
-        return ["prot-2XN4.pt", "prot-1ESE.pt"]  # head and tail proteins
+        return [
+            f"prot-{id}.pt" for id in ["5KJG", "1VEX", "1U5M", "2KHR", "1Q09"]
+        ]  # tiny proteins
 
     @property
     def files(self):
@@ -110,8 +112,8 @@ class RCSBDataset(Dataset):
 
     def download(self):
         url = (
-            "https://github.com/pstjohn/gvp/releases/download/v0.0.1/"
-            "small_sample.parquet"
+            "https://github.com/pstjohn/torch_gvp/releases/download/v0.0.1/"
+            "sample_tiny.parquet"
         )
 
         download_url(url, self.raw_dir, filename=self._raw_filename)

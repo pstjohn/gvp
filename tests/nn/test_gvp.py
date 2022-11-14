@@ -3,7 +3,7 @@ import torch
 from scipy.spatial.transform import Rotation
 
 from torch_gvp.nn.gvp import GVP, GVPVectorGate
-from torch_gvp.nn.gvp_conv import GVPConv
+from torch_gvp.nn.gvp_conv import GVPConv, GVPConvLayer
 from torch_gvp.test.data import rand_vector_tuple
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -86,6 +86,42 @@ def test_gvp_conv(rotation, v_in, v_out, vector_gate):
 
     assert s_out.shape == (num_nodes, node_dim_out[0])
     assert v_out.shape == (num_nodes, node_dim_out[1], 3)
+
+    # Check equivariance
+    with torch.no_grad():
+        node_v_rot = node_v @ rotation
+        edge_v_rot = edge_v @ rotation
+
+        s_out_prime, v_out_prime = model(
+            node_s, node_v_rot, edge_s, edge_v_rot, edge_index
+        )
+
+        assert torch.allclose(s_out, s_out_prime, atol=1e-5, rtol=1e-4)
+        assert torch.allclose(v_out @ rotation, v_out_prime, atol=1e-5, rtol=1e-4)
+
+
+@pytest.mark.parametrize("n_feedfoward", [0, 1])
+def test_gvp_conv_layer(rotation, v_in, v_out, n_feedfoward):
+    node_dim = (32, v_in)
+    edge_dim = (32, v_out)
+    num_nodes = 10
+    num_edges = 25
+
+    node_s, node_v = rand_vector_tuple(num_nodes, node_dim)
+    edge_s, edge_v = rand_vector_tuple(num_edges, edge_dim)
+    edge_index = torch.randint(0, num_nodes, (2, num_edges), device=device)
+
+    model = (
+        GVPConvLayer(node_dim, edge_dim, 1, n_feedfoward, vector_gate=True)
+        .to(device)
+        .eval()
+    )
+
+    with torch.no_grad():
+        s_out, v_out = model(node_s, node_v, edge_s, edge_v, edge_index)
+
+    assert s_out.shape == (num_nodes, node_dim[0])
+    assert v_out.shape == (num_nodes, node_dim[1], 3)
 
     # Check equivariance
     with torch.no_grad():
