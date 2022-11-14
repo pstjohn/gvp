@@ -4,8 +4,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from gvp.nn.vector import norm_no_nan
-from gvp.typing import ActivationFnArgs, VectorTuple, VectorTupleDim
+from torch_gvp.nn.vector import norm_no_nan
+from torch_gvp.typing import ActivationFnArgs, VectorTuple, VectorTupleDim
 
 
 class GVP(nn.Module):

@@ -2,9 +2,9 @@ import pytest
 import torch
 from scipy.spatial.transform import Rotation
 
-from gvp.nn.gvp import GVP, GVPVectorGate
-from gvp.nn.gvp_conv import GVPConv
-from gvp.test.data import rand_vector_tuple
+from torch_gvp.nn.gvp import GVP, GVPVectorGate
+from torch_gvp.nn.gvp_conv import GVPConv
+from torch_gvp.test.data import rand_vector_tuple
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -16,8 +16,21 @@ def rotation():
     )
 
 
-@pytest.mark.parametrize("v_in,v_out", [(0, 0), (16, 8), (0, 16), (16, 0)])
-@pytest.mark.parametrize("vector_gate", [True, False])
+@pytest.fixture(name="v_in", params=(0, 16))
+def _v_in(request):
+    return request.param
+
+
+@pytest.fixture(name="v_out", params=(0, 8))
+def _v_out(request):
+    return request.param
+
+
+@pytest.fixture(name="vector_gate", params=(True, False))
+def _vector_gate(request):
+    return request.param
+
+
 def test_gvp(rotation, v_in, v_out, vector_gate):
     node_dim_in = (32, v_in)
     node_dim_out = (24, v_out)
@@ -50,8 +63,6 @@ def test_gvp(rotation, v_in, v_out, vector_gate):
         assert torch.allclose(out_v_rot, out_v_prime, atol=1e-5, rtol=1e-4)
 
 
-@pytest.mark.parametrize("v_in,v_out", [(0, 0), (16, 8), (0, 16), (16, 0)])
-@pytest.mark.parametrize("vector_gate", [True, False])
 def test_gvp_conv(rotation, v_in, v_out, vector_gate):
     node_dim_in = (32, v_in)
     node_dim_out = (24, v_out)

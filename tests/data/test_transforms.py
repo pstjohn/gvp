@@ -1,4 +1,4 @@
-from gvp.data.transforms import NodeOrientation, create_gvp_transformer_stack
+from torch_gvp.data.transforms import NodeOrientation, create_gvp_transformer_stack
 
 
 def test_node_orientation(prot_data):

@@ -4,9 +4,9 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
 
-from gvp.nn import vector
-from gvp.nn.gvp import GVP, GVPVectorGate
-from gvp.typing import ActivationFnArgs, VectorTuple, VectorTupleDim
+from torch_gvp.nn import vector
+from torch_gvp.nn.gvp import GVP, GVPVectorGate
+from torch_gvp.typing import ActivationFnArgs, VectorTuple, VectorTupleDim
 
 
 def build_gvp_module_list(
@@ -17,6 +17,29 @@ def build_gvp_module_list(
     activations: ActivationFnArgs,
     vector_gate: bool,
 ) -> List[GVP]:
+    """Builds a stack of GVP layers with appropriate activation functions given the
+    desired input and output dimensions
+
+    Parameters
+    ----------
+    n_layers : int
+        number of GVP layers per message update
+    in_dims : VectorTupleDim
+        Dimensions of the input node scalar and vector features
+    out_dims : VectorTupleDim
+        Dimensions of the output node scalar and vector features
+    edge_dims : VectorTupleDim
+        Dimensions of the edge's scalar and vector features
+    activations : ActivationFnArgs
+        Tuple of activation functions to use in intermediate layers
+    vector_gate : bool
+        Whether to use the GVPVectorGate class
+
+    Returns
+    -------
+    List[GVP]
+        A list of GVP or GVPVectorGate classes representing the DNN stack
+    """
 
     si, vi = in_dims
     se, ve = edge_dims

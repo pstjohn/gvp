@@ -1,6 +1,6 @@
 import torch
 
-from gvp.typing import VectorTuple
+from torch_gvp.typing import VectorTuple
 
 
 def tuple_sum(*args: VectorTuple) -> VectorTuple:

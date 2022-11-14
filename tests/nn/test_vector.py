@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from gvp.nn.vector import merge, split
-from gvp.test.data import rand_vector_tuple
+from torch_gvp.nn.vector import merge, split
+from torch_gvp.test.data import rand_vector_tuple
 
 
 @pytest.mark.parametrize("dim", [(0, 0), (16, 8), (0, 16), (16, 0)])

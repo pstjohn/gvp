@@ -10,7 +10,7 @@ import torch
 from torch_geometric.data import Data, Dataset, download_url
 from tqdm import tqdm
 
-from gvp.data.biotite import convert_to_pyg, load_bytes
+from torch_gvp.data.biotite import convert_to_pyg, load_bytes
 
 
 def process_item(

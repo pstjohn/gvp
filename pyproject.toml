@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "gvp"
+name = "torch_gvp"
 version = "0.1.0"
 description = ""
 authors = ["Peter St. John <peterc.stjohn@gmail.com>"]

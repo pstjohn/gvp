@@ -1,4 +1,4 @@
-from gvp.data.residue import ResidueType
+from torch_gvp.data.residue import ResidueType
 
 
 def test_residue():

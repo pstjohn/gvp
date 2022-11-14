@@ -3,7 +3,7 @@ from typing import Union
 import torch
 from torch_geometric.data import Data
 
-from gvp.typing import VectorTuple, VectorTupleDim
+from torch_gvp.typing import VectorTuple, VectorTupleDim
 
 
 def rand_vector_tuple(

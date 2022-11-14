@@ -8,7 +8,7 @@ import torch_geometric.data
 from biotite.structure import AtomArray, AtomArrayStack, filter_backbone
 from biotite.structure.io.mmtf import MMTFFile, get_structure  # type: ignore
 
-from gvp.data.residue import AtomType, ResidueType
+from torch_gvp.data.residue import AtomType, ResidueType
 
 
 def load_mmtf_file(filename: Union[str, Path]) -> AtomArrayStack:

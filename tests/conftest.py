@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from torch_geometric.data import Data
 
-from gvp.data.biotite import convert_to_pyg, load_mmtf_file
+from torch_gvp.data.biotite import convert_to_pyg, load_mmtf_file
 
 
 @pytest.fixture

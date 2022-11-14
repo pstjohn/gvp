@@ -3,8 +3,8 @@ from typing import Tuple
 import torch
 from torch import nn
 
-from gvp.nn.vector import norm_no_nan
-from gvp.typing import VectorTuple
+from torch_gvp.nn.vector import norm_no_nan
+from torch_gvp.typing import VectorTuple
 
 
 class _VDropout(nn.Module):
