@@ -1,19 +1,9 @@
 import pytest
 import torch
-from scipy.spatial.transform import Rotation
 
 from torch_gvp.nn.gvp import GVP, GVPVectorGate
 from torch_gvp.nn.gvp_conv import GVPConv, GVPConvLayer
 from torch_gvp.test.data import rand_vector_tuple
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-@pytest.fixture()
-def rotation():
-    return torch.as_tensor(
-        Rotation.random().as_matrix(), dtype=torch.float32, device=device
-    )
 
 
 @pytest.fixture(name="v_in", params=(0, 16))
@@ -31,7 +21,7 @@ def _vector_gate(request):
     return request.param
 
 
-def test_gvp(rotation, v_in, v_out, vector_gate):
+def test_gvp(rotation, v_in, v_out, vector_gate, device):
     node_dim_in = (32, v_in)
     node_dim_out = (24, v_out)
     num_nodes = 10
@@ -63,7 +53,7 @@ def test_gvp(rotation, v_in, v_out, vector_gate):
         assert torch.allclose(out_v_rot, out_v_prime, atol=1e-5, rtol=1e-4)
 
 
-def test_gvp_conv(rotation, v_in, v_out, vector_gate):
+def test_gvp_conv(rotation, v_in, v_out, vector_gate, device):
     node_dim_in = (32, v_in)
     node_dim_out = (24, v_out)
     edge_dim = (32, 1)
@@ -101,7 +91,7 @@ def test_gvp_conv(rotation, v_in, v_out, vector_gate):
 
 
 @pytest.mark.parametrize("n_feedfoward", [0, 1])
-def test_gvp_conv_layer(rotation, v_in, v_out, n_feedfoward):
+def test_gvp_conv_layer(rotation, v_in, v_out, n_feedfoward, device):
     node_dim = (32, v_in)
     edge_dim = (32, v_out)
     num_nodes = 10

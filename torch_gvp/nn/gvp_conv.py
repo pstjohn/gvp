@@ -1,7 +1,6 @@
 from typing import List, Optional
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 from torch_geometric.nn import MessagePassing
 
@@ -16,7 +15,7 @@ def build_gvp_stack(
     in_dims: VectorTupleDim,
     hid_dims: VectorTupleDim,
     out_dims: VectorTupleDim,
-    activations: ActivationFnArgs,
+    activations: Optional[ActivationFnArgs],
     vector_gate: bool,
 ) -> List[GVP]:
     """Builds a stack of GVP layers with appropriate activation functions given the
@@ -96,10 +95,10 @@ class GVPConv(MessagePassing):
         n_layers: int = 3,
         module_list: Optional[List[GVP]] = None,
         aggr: str = "mean",
-        activations: ActivationFnArgs = (F.relu, torch.sigmoid),
+        activations: Optional[ActivationFnArgs] = None,
         vector_gate: bool = True,
     ):
-        super(GVPConv, self).__init__(aggr=aggr)
+        super().__init__(aggr=aggr)
         self.in_dims = in_dims
         self.out_dims = out_dims
         self.edge_dims = edge_dims
@@ -119,7 +118,7 @@ class GVPConv(MessagePassing):
                 vector_gate,
             )
 
-        self.module_list = nn.ModuleList(module_list)
+        self.message_stack = gvp_layers.VectorSequential(*module_list)
 
     def forward(
         self,
@@ -155,9 +154,7 @@ class GVPConv(MessagePassing):
         v_j = v_j.view(v_j.shape[0], v_j.shape[1] // 3, 3)
         v_i = v_i.view(v_i.shape[0], v_i.shape[1] // 3, 3)
         s, v = vector.tuple_cat((s_j, v_j), (edge_s, edge_v), (s_i, v_i))
-
-        for layer in self.module_list:
-            s, v = layer(s, v)
+        s, v = self.message_stack(s, v)
 
         return vector.merge(s, v)
 
@@ -173,7 +170,7 @@ class GVPConvLayer(nn.Module):
 
     :param node_dims: node embedding dimensions (n_scalar, n_vector)
     :param edge_dims: input edge embedding dimensions (n_scalar, n_vector)
-    :param n_message: number of GVPs to use in message function
+    :param gvp_conv_n_layers: number of GVPs to use in message function
     :param n_feedforward: number of GVPs to use in feedforward function
     :param drop_rate: drop probability in all dropout layers
     :param activations: tuple of functions (scalar_act, vector_act) to use in GVPs
@@ -188,16 +185,16 @@ class GVPConvLayer(nn.Module):
         n_message: int = 3,
         n_feedforward: int = 2,
         drop_rate: float = 0.1,
-        activations=(F.relu, torch.sigmoid),
+        activations: Optional[ActivationFnArgs] = None,
         vector_gate: bool = True,
     ):
 
-        super(GVPConvLayer, self).__init__()
+        super().__init__()
         self.conv = GVPConv(
             node_dims,
             node_dims,
             edge_dims,
-            n_message,
+            n_layers=n_message,
             aggr="mean",
             activations=activations,
             vector_gate=vector_gate,
@@ -219,7 +216,7 @@ class GVPConvLayer(nn.Module):
             vector_gate=vector_gate,
         )
 
-        self.ff_stack = nn.ModuleList(ff_stack)
+        self.ff_stack = gvp_layers.VectorSequential(*ff_stack)
 
     def forward(
         self,
@@ -236,13 +233,13 @@ class GVPConvLayer(nn.Module):
         node_s, node_v = vector.tuple_sum((node_s, node_v), (d_node_s, d_node_v))
         node_s, node_v = self.vector_norm[0](node_s, node_v)
 
+        if len(self.ff_stack) == 0:
+            return node_s, node_v
+
         # node-level update with FF GVP
-        if len(self.ff_stack) > 0:
-            d_node_s, d_node_v = node_s, node_v
-            for layer in self.ff_stack:
-                d_node_s, d_node_v = layer(d_node_s, d_node_v)
-            d_node_s, d_node_v = self.vector_dropout[1](d_node_s, d_node_v)
-            node_s, node_v = vector.tuple_sum((node_s, node_v), (d_node_s, d_node_v))
-            node_s, node_v = self.vector_norm[1](node_s, node_v)
+        d_node_s, d_node_v = self.ff_stack(node_s, node_v)
+        d_node_s, d_node_v = self.vector_dropout[1](d_node_s, d_node_v)
+        node_s, node_v = vector.tuple_sum((node_s, node_v), (d_node_s, d_node_v))
+        node_s, node_v = self.vector_norm[1](node_s, node_v)
 
         return node_s, node_v

@@ -116,7 +116,7 @@ class RCSBDataset(Dataset):
             "sample_tiny.parquet"
         )
 
-        download_url(url, self.raw_dir, filename=self._raw_filename)
+        download_url(url, self.raw_dir, log=True, filename=self._raw_filename)
 
     def process(self):
 

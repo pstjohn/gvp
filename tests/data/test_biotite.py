@@ -14,6 +14,6 @@ def biotite_stack():
 def test_convert_to_pyg(biotite_stack):
     data = convert_to_pyg(biotite_stack)
     assert data.pos.shape[1] == 3
-    assert data.atom_types.shape[0] == data.pos.shape[0]
-    assert data.atom_types.max() == 3
-    assert data.residue_types.max() <= 20
+    assert data.atom_type.shape[0] == data.pos.shape[0]
+    assert data.atom_type.max() == 3
+    assert data.residue_type.max() <= 20

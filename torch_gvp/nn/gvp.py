@@ -26,9 +26,9 @@ class GVP(nn.Module):
         in_dims: VectorTupleDim,
         out_dims: VectorTupleDim,
         h_dim: Optional[int] = None,
-        activations: ActivationFnArgs = (F.relu, torch.sigmoid),
+        activations: Optional[ActivationFnArgs] = None,
     ):
-        super(GVP, self).__init__()
+        super().__init__()
         self.in_dims = in_dims
         self.out_dims = out_dims
         self.h_dim = h_dim or max(in_dims[1], out_dims[1])
@@ -37,7 +37,10 @@ class GVP(nn.Module):
         self.ws = nn.Linear(self.h_dim + in_dims[0], out_dims[0])
         self.wv = nn.Linear(self.h_dim, out_dims[1], bias=False)
 
-        self.scalar_act, self.vector_act = activations
+        if activations is not None:
+            self.scalar_act, self.vector_act = activations
+        else:
+            self.scalar_act, self.vector_act = F.relu, torch.sigmoid
 
     def vector_nonlinearity(self, s: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
         """Perform a nonlinear update of the vector state in a rotationally equivariant
@@ -75,6 +78,16 @@ class GVP(nn.Module):
         VectorTuple
             scalar and vector features after transformation
         """
+
+        assert s.shape[-1] == self.in_dims[0], (
+            f"scalar input should have dimenion {self.in_dims[0]}, "
+            f"but instead has dimension {s.shape[-1]}"
+        )
+        assert v.shape[-2] == self.in_dims[1], (
+            f"vector input should have dimenion {self.in_dims[1]}, "
+            f"but instead has dimension {v.shape[-2]}"
+        )
+
         v = torch.transpose(v, -1, -2)
         vh = self.wh(v)
         vn = norm_no_nan(vh, axis=-2)

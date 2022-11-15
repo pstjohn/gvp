@@ -2,6 +2,7 @@ from typing import Tuple
 
 import torch
 from torch import nn
+from torch.nn.parameter import Parameter
 
 from torch_gvp.nn.vector import norm_no_nan
 from torch_gvp.typing import VectorTuple
@@ -14,7 +15,7 @@ class _VDropout(nn.Module):
     """
 
     def __init__(self, drop_rate: float):
-        super(_VDropout, self).__init__()
+        super().__init__()
         self.drop_rate = drop_rate
         self.dummy_param = nn.parameter.Parameter(torch.empty(0))
 
@@ -39,7 +40,7 @@ class Dropout(nn.Module):
     """
 
     def __init__(self, drop_rate):
-        super(Dropout, self).__init__()
+        super().__init__()
         self.sdropout = nn.Dropout(drop_rate)
         self.vdropout = _VDropout(drop_rate)
 
@@ -59,7 +60,7 @@ class LayerNorm(nn.Module):
     """
 
     def __init__(self, dims: Tuple[int, int]):
-        super(LayerNorm, self).__init__()
+        super().__init__()
         self.s, self.v = dims
         self.scalar_norm = nn.LayerNorm(self.s)
 
@@ -72,3 +73,57 @@ class LayerNorm(nn.Module):
         vn = norm_no_nan(v, axis=-1, keepdims=True, sqrt=False)
         vn = torch.sqrt(torch.mean(vn, dim=-2, keepdim=True))
         return self.scalar_norm(s), v / vn
+
+
+class RBF(nn.Module):
+    def __init__(
+        self,
+        dimension: int = 64,
+        init_max_distance: float = 10.0,
+        trainable: bool = True,
+    ) -> None:
+        """Computes a trainable Gaussian radial basis function expansion of the inputs.
+        For a given input, returns an output of shape [..., dimension] expanded on the
+        last dimension. Adapted from github.com/atomistic-machine-learning/schnetpack.
+
+        Original copyright:
+
+        Copyright (c) 2018 Kristof Schütt, Michael Gastegger, Pan Kessel, Kim Nicoli
+
+        All other contributions:
+        Copyright (c) 2018, the respective contributors.
+        All rights reserved.
+
+        Parameters
+        ----------
+        dimension : int, optional
+            Size of the output embedding, by default 64
+        init_max_distance : float, optional
+            Maximum distance of the RBF embedding buckets, by default 10.0
+        trainable : bool, optional
+            Whether parameters should be fit during backprop, by default True
+        """
+        super().__init__()
+
+        offsets = torch.linspace(0, init_max_distance, dimension, dtype=torch.float32)
+        widths = torch.Tensor(init_max_distance / dimension * torch.ones_like(offsets))
+
+        if trainable:
+            self.offsets = Parameter(offsets)
+            self.widths = Parameter(widths)
+        else:
+            self.register_buffer("offsets", offsets)
+            self.register_buffer("widths", widths)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        coeff = -0.5 / torch.pow(self.widths, 2)
+        diff = inputs[..., None] - self.offsets
+        y = torch.exp(coeff * torch.pow(diff, 2))
+        return y
+
+
+class VectorSequential(nn.Sequential):
+    def forward(self, s: torch.Tensor, v: torch.Tensor) -> VectorTuple:
+        for module in self:
+            s, v = module(s, v)
+        return s, v

@@ -37,3 +37,4 @@ class ResidueType(Enum, metaclass=DefaultEnumMeta):
     TYR = auto()
     VAL = auto()
     UNK = auto()
+    MASK = auto()
