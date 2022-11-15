@@ -8,7 +8,8 @@ def test_residue_gvp(rcsb_loader, rotation, device):
         ResidueGVP(
             node_dims=(32, 8),
             edge_dims=(8, 4),
-            n_conv=2,
+            n_atom_conv=1,
+            n_res_conv=1,
             conv_n_message=1,
             conv_n_feedforward=1,
         )
@@ -26,6 +27,7 @@ def test_residue_gvp(rcsb_loader, rotation, device):
             item.edge_s,
             item.edge_v,
             item.edge_index,
+            item.residue_index,
         )
 
         s_out_prime = model(
@@ -35,6 +37,7 @@ def test_residue_gvp(rcsb_loader, rotation, device):
             item.edge_s,
             item.edge_v @ rotation,
             item.edge_index,
+            item.residue_index,
         )
 
     assert s_out.shape[-1] == 20

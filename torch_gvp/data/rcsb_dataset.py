@@ -129,6 +129,11 @@ class RCSBDataset(Dataset):
             pre_transform=self.pre_transform,
         )
 
+        if self.num_processes == 1:
+            for _ in tqdm(map(map_fn, df.values)):
+                continue
+            return
+
         with multiprocessing.Pool(self.num_processes) as pool:
-            for item in tqdm(pool.imap_unordered(map_fn, df.values), total=len(df)):
+            for _ in tqdm(pool.imap_unordered(map_fn, df.values), total=len(df)):
                 continue

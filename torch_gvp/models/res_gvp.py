@@ -7,6 +7,7 @@ from torch_gvp.data.residue import AtomType, ResidueType
 from torch_gvp.nn import layers as gvp_layers
 from torch_gvp.nn.gvp import GVP
 from torch_gvp.nn.gvp_conv import GVPConvLayer
+from torch_gvp.nn.pool import vector_mean_pool
 from torch_gvp.typing import ActivationFnArgs, VectorTupleDim
 
 
@@ -15,7 +16,8 @@ class ResidueGVP(nn.Module):
         self,
         node_dims: VectorTupleDim = (128, 16),
         edge_dims: VectorTupleDim = (32, 1),
-        n_conv: int = 3,
+        n_atom_conv: int = 1,
+        n_res_conv: int = 3,
         conv_n_message: int = 3,
         conv_n_feedforward: int = 2,
         drop_rate: float = 0.1,
@@ -25,7 +27,8 @@ class ResidueGVP(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.node_dims = node_dims
+        self.n_atom_conv = n_atom_conv
+        self.n_res_conv = n_res_conv
 
         self.conv_layers = nn.ModuleList(
             [
@@ -38,15 +41,15 @@ class ResidueGVP(nn.Module):
                     activations=activations,
                     vector_gate=vector_gate,
                 )
-                for _ in range(n_conv)
+                for _ in range(n_atom_conv + n_res_conv)
             ]
         )
 
         self.atom_embedding = nn.Embedding(
-            len(AtomType) + 1, self.node_dims[0], padding_idx=0
+            len(AtomType) + 1, node_dims[0], padding_idx=0
         )
         self.res_embedding = nn.Embedding(
-            len(ResidueType) + 1, self.node_dims[0], padding_idx=0
+            len(ResidueType) + 1, node_dims[0], padding_idx=0
         )
         self.edge_rbf = gvp_layers.RBF(
             dimension=edge_dims[0], init_max_distance=init_max_distance, trainable=True
@@ -72,6 +75,7 @@ class ResidueGVP(nn.Module):
         edge_s: torch.Tensor,
         edge_v: torch.Tensor,
         edge_index: torch.Tensor,
+        residue_index: torch.Tensor,
     ) -> torch.Tensor:
 
         node_s = self.atom_embedding(atom_type) + self.res_embedding(residue_type)
@@ -80,8 +84,24 @@ class ResidueGVP(nn.Module):
         node_s, node_v = self.first_node_layer(node_s, node_v)
         edge_s, edge_v = self.first_edge_layer(edge_s, edge_v)
 
-        for layer in self.conv_layers:
-            node_s, node_v = layer(node_s, node_v, edge_s, edge_v, edge_index)
+        for i in range(self.n_atom_conv):
+            node_s, node_v = self.conv_layers[i](
+                node_s, node_v, edge_s, edge_v, edge_index
+            )
+
+        node_s, node_v, edge_s, edge_v, edge_index = vector_mean_pool(
+            node_s,
+            node_v,
+            edge_s,
+            edge_v,
+            edge_index,
+            residue_index,
+        )
+
+        for i in range(self.n_res_conv):
+            node_s, node_v = self.conv_layers[self.n_atom_conv + i](
+                node_s, node_v, edge_s, edge_v, edge_index
+            )
 
         out, _ = self.masked_seq_head(node_s, node_v)
         return out

@@ -79,13 +79,13 @@ class GVP(nn.Module):
             scalar and vector features after transformation
         """
 
-        assert s.shape[-1] == self.in_dims[0], (
+        assert s.size(-1) == self.in_dims[0], (
             f"scalar input should have dimenion {self.in_dims[0]}, "
-            f"but instead has dimension {s.shape[-1]}"
+            f"but instead has dimension {s.size(-1)}"
         )
-        assert v.shape[-2] == self.in_dims[1], (
+        assert v.size(-2) == self.in_dims[1], (
             f"vector input should have dimenion {self.in_dims[1]}, "
-            f"but instead has dimension {v.shape[-2]}"
+            f"but instead has dimension {v.size(-2)}"
         )
 
         v = torch.transpose(v, -1, -2)

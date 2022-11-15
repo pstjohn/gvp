@@ -61,8 +61,8 @@ def test_gvp_conv(rotation, v_in, v_out, vector_gate, device):
     num_edges = 25
     n_layers = 2
 
-    node_s, node_v = rand_vector_tuple(num_nodes, node_dim_in)
-    edge_s, edge_v = rand_vector_tuple(num_edges, edge_dim)
+    node_s, node_v = rand_vector_tuple(num_nodes, node_dim_in, device)
+    edge_s, edge_v = rand_vector_tuple(num_edges, edge_dim, device)
     edge_index = torch.randint(0, num_nodes, (2, num_edges), device=device)
 
     model = (
@@ -97,8 +97,8 @@ def test_gvp_conv_layer(rotation, v_in, v_out, n_feedfoward, device):
     num_nodes = 10
     num_edges = 25
 
-    node_s, node_v = rand_vector_tuple(num_nodes, node_dim)
-    edge_s, edge_v = rand_vector_tuple(num_edges, edge_dim)
+    node_s, node_v = rand_vector_tuple(num_nodes, node_dim, device)
+    edge_s, edge_v = rand_vector_tuple(num_edges, edge_dim, device)
     edge_index = torch.randint(0, num_nodes, (2, num_edges), device=device)
 
     model = (

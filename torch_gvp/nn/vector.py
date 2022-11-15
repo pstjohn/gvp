@@ -42,7 +42,7 @@ def split(x: torch.Tensor, nv: int) -> VectorTuple:
     :param x: the `torch.Tensor` returned from `_merge`
     :param nv: the number of vector channels in the input to `_merge`
     """
-    scalar_dims = x.shape[-1] - 3 * nv
+    scalar_dims = x.size(-1) - 3 * nv
     v = torch.reshape(x[..., scalar_dims:], x.shape[:-1] + (nv, 3))
     s = x[..., :scalar_dims]
     return s, v
@@ -55,7 +55,7 @@ def merge(s: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     Should be used only if the tuple representation cannot be used.
     Use `_split(x, nv)` to reverse.
     """
-    v = torch.reshape(v, v.shape[:-2] + (3 * v.shape[-2],))
+    v = torch.reshape(v, v.shape[:-2] + (3 * v.size(-2),))
     return torch.cat([s, v], -1)
 
 

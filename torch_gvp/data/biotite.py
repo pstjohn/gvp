@@ -35,7 +35,7 @@ def convert_to_pyg(atom_stack: AtomArrayStack) -> torch_geometric.data.Data:
     residue_type: [num_atoms,], int
         An array mapping the atom's residue to an integer representation of its amino
         acid
-    residue_indices: [num_atoms,], int
+    residue_index: [num_atoms,], int
         An array mapping each atom to it's corresponding amino acid's position in the
         overall protein chain
 
@@ -67,13 +67,14 @@ def convert_to_pyg(atom_stack: AtomArrayStack) -> torch_geometric.data.Data:
         dtype=torch.int32,
     )
 
-    residue_indices = torch.tensor(
-        atoms._annot["res_id"][is_backbone], dtype=torch.int32
+    residue_index = torch.tensor(
+        atoms._annot["res_id"][is_backbone] - atoms._annot["res_id"][is_backbone].min(),
+        dtype=torch.int32,
     )
 
     return torch_geometric.data.Data(
         pos=pos,
         atom_type=atom_type,
         residue_type=residue_type,
-        residue_indices=residue_indices,
+        residue_index=residue_index,
     )

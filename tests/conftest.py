@@ -47,6 +47,7 @@ def rcsb_dataset(data_path: str) -> Dataset:
         data_path,
         transform=create_gvp_transformer_stack(jitter=0.02, residue_mask_prob=0.35),
         pre_filter=size_filter,
+        num_processes=1,
     )
 
 
