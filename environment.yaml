@@ -1,0 +1,16 @@
+name: torch_gvp
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.8
+  - pytorch
+  - pytorch_sparse
+  - pytorch_scatter
+  - pytorch_cluster
+  - pytorch_geometric
+  - numpy
+  - biotite
+  - pydantic
+  - pandas
+  - pyarrow
