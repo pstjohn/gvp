@@ -15,7 +15,7 @@ def test_vector_mean_pool(rotation, device):
     node_s, node_v = rand_vector_tuple(num_nodes, node_dim, device)
     edge_s, edge_v = rand_vector_tuple(num_edges, edge_dim, device)
     edge_index = torch.randint(0, num_nodes, (2, num_edges), device=device)
-    cluster = torch.arange(4).repeat_interleave(3)
+    cluster = torch.arange(4).repeat_interleave(3).to(device)
 
     with torch.no_grad():
         (
@@ -24,14 +24,7 @@ def test_vector_mean_pool(rotation, device):
             edge_s_pool,
             edge_v_pool,
             edge_index_pool,
-        ) = vector_mean_pool(
-            node_s,
-            node_v,
-            edge_s,
-            edge_v,
-            edge_index,
-            cluster,
-        )
+        ) = vector_mean_pool(node_s, node_v, edge_s, edge_v, edge_index, cluster)
 
         (
             node_s_pool_prime,
@@ -40,12 +33,7 @@ def test_vector_mean_pool(rotation, device):
             edge_v_pool_prime,
             edge_index_pool_prime,
         ) = vector_mean_pool(
-            node_s,
-            node_v @ rotation,
-            edge_s,
-            edge_v @ rotation,
-            edge_index,
-            cluster,
+            node_s, node_v @ rotation, edge_s, edge_v @ rotation, edge_index, cluster
         )
 
     assert node_s_pool.shape[0] == 4

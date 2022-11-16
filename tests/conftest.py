@@ -11,10 +11,14 @@ from torch_gvp.data.biotite import convert_to_pyg, load_mmtf_file
 from torch_gvp.data.rcsb_dataset import RCSBDataset, size_filter
 from torch_gvp.data.transforms import create_gvp_transformer_stack
 
+devices = ["cpu"]
+if torch.cuda.is_available():
+    devices.append("cuda")
 
-@pytest.fixture(scope="session")
-def device():
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+@pytest.fixture(scope="session", params=devices)
+def device(request):
+    return torch.device(request.param)
 
 
 @pytest.fixture(scope="function")

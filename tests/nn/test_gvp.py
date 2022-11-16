@@ -25,7 +25,7 @@ def test_gvp(rotation, v_in, v_out, vector_gate, device):
     node_dim_in = (32, v_in)
     node_dim_out = (24, v_out)
     num_nodes = 10
-    s, v = rand_vector_tuple(num_nodes, node_dim_in)
+    s, v = rand_vector_tuple(num_nodes, node_dim_in, device)
 
     gvp_class = GVPVectorGate if vector_gate else GVP
     model = gvp_class(node_dim_in, node_dim_out).to(device).eval()

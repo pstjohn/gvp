@@ -11,6 +11,5 @@ dependencies:
   - pytorch_geometric
   - numpy
   - biotite
-  - pydantic
   - pandas
   - pyarrow
