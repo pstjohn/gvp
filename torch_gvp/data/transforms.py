@@ -13,7 +13,7 @@ from torch_geometric.transforms import BaseTransform
 from torch_gvp.data.residue import ResidueType
 
 
-def _normalize(tensor, dim=-1):
+def _normalize(tensor: torch.Tensor, dim=-1) -> torch.Tensor:
     """
     Normalizes a `torch.Tensor` along dimension `dim` without `nan`s.
     """
@@ -22,37 +22,25 @@ def _normalize(tensor, dim=-1):
     )
 
 
-def _orientations(X):
+def _orientations(X: torch.Tensor, discont: torch.Tensor) -> torch.Tensor:
     forward = _normalize(X[1:] - X[:-1])
     backward = _normalize(X[:-1] - X[1:])
     forward = F.pad(forward, [0, 0, 0, 1])
     backward = F.pad(backward, [0, 0, 1, 0])
+
+    # For chain discontinuities, zero these input directions
+    forward[discont - 1] = 0
+    backward[discont] = 0
+
     return torch.cat([forward.unsqueeze(-2), backward.unsqueeze(-2)], -2)
 
 
 class NodeOrientation(BaseTransform):
-    def __init__(self, norm: bool = True) -> None:
-        """Calculates vectors for the input and output edges of each node as node vector
-        features, assuming that pos[n] is linked to pos[n+1] (i.e., through a protein
-        backbone structure)
-
-        Parameters
-        ----------
-        norm : bool, optional
-            Whether to return a vector with unit euclidian norm, by default True
-        cat : bool, optional
-            If set to :obj:`False`, all existing edge attributes will be replaced.
-            (default: :obj:`True`)
-        """
-        self.norm = norm
-
     def __call__(self, data: Data) -> Data:
 
-        dist = _orientations(data.pos)
-        if self.norm:
-            dist = _normalize(dist)
-
+        dist = _orientations(data.pos, data.residue_discont)
         data["node_v"] = dist
+        del data["residue_discont"]
 
         return data
 

@@ -26,7 +26,7 @@ def rotation(device):
 
 @pytest.fixture
 def prot_data() -> Data:
-    filename = Path(Path(__file__).parent, "data/4HHB.mmtf.gz").absolute()
+    filename = Path(Path(__file__).parent, "4HHB.mmtf.gz").absolute()
     return convert_to_pyg(load_mmtf_file(filename))
 
 

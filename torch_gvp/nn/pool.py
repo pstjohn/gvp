@@ -25,7 +25,7 @@ def vector_mean_pool(
     edge_s : torch.Tensor
     edge_v : torch.Tensor
     edge_index : torch.Tensor
-    cluster : torch.Tensor
+    cluster : torch.Tensor (dtype int64)
         An integer mapping of node and edge features to new residue-level clusters
 
     Returns

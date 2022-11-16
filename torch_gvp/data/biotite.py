@@ -5,7 +5,12 @@ from typing import Union
 
 import torch
 import torch_geometric.data
-from biotite.structure import AtomArray, AtomArrayStack, filter_backbone
+from biotite.structure import (
+    AtomArray,
+    AtomArrayStack,
+    check_res_id_continuity,
+    filter_backbone,
+)
 from biotite.structure.io.mmtf import MMTFFile, get_structure  # type: ignore
 
 from torch_gvp.data.residue import AtomType, ResidueType
@@ -23,6 +28,19 @@ def load_bytes(data: bytes, compressed=True) -> AtomArrayStack:
     if compressed:
         data = gzip.decompress(data)
     return get_structure(MMTFFile.read(io.BytesIO(data)))
+
+
+class ResidueData(torch_geometric.data.Data):
+    """We need to provide a custom data object so we can define how the `residue_index`
+    value is incremented. Rather than being offset by the total number of nodes, this
+    should be offset by the total number of residues (nodes // 3, assuming 3 backbone
+    atoms per residue).
+    """
+
+    def __inc__(self, key, value, *args, **kwargs):
+        if key == "residue_index":
+            return self.num_nodes // 3  # type: ignore
+        return super().__inc__(key, value, *args, **kwargs)
 
 
 def convert_to_pyg(atom_stack: AtomArrayStack) -> torch_geometric.data.Data:
@@ -51,6 +69,9 @@ def convert_to_pyg(atom_stack: AtomArrayStack) -> torch_geometric.data.Data:
     """
 
     # For proteins where we have an NMR ensemble, we just take the first chain
+    # TODO: we need to fix residue indexing for proteins with multiple chains in a
+    # single structure
+
     atoms: AtomArray = atom_stack[0]  # type: ignore
     assert atoms.coord is not None  # for typing, not sure we'd expect this to be None
 
@@ -67,14 +88,18 @@ def convert_to_pyg(atom_stack: AtomArrayStack) -> torch_geometric.data.Data:
         dtype=torch.int32,
     )
 
-    residue_index = torch.tensor(
-        atoms._annot["res_id"][is_backbone] - atoms._annot["res_id"][is_backbone].min(),
-        dtype=torch.int32,
+    residue_index = torch.arange(
+        0, atoms[is_backbone].shape[0] // 3, dtype=torch.int64  # type: ignore
+    ).repeat_interleave(3)
+
+    residue_discont = torch.as_tensor(
+        check_res_id_continuity(atoms[is_backbone]), dtype=torch.int64
     )
 
-    return torch_geometric.data.Data(
+    return ResidueData(
         pos=pos,
         atom_type=atom_type,
         residue_type=residue_type,
         residue_index=residue_index,
+        residue_discont=residue_discont,
     )

@@ -17,3 +17,5 @@ def test_rcdb_dataset(rcsb_dataset):
             torch.unique(item.residue_index).shape[0]
             == item.residue_index.shape[0] // 3
         )
+
+        assert item.residue_index.max() == item.num_nodes // 3 - 1
