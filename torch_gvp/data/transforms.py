@@ -46,7 +46,7 @@ class NodeOrientation(BaseTransform):
 
 
 class ResidueMask(BaseTransform):
-    def __init__(self, mask_prob: float = 0.4) -> None:
+    def __init__(self, mask_prob: float = 0.4, random_token_prob: float = 0.15) -> None:
         """Randomly mask protein residues, recording the true residue types and the
         boolean node and residue mask.
 
@@ -57,15 +57,34 @@ class ResidueMask(BaseTransform):
         ----------
         mask_prob : float, optional
             The faction of input residues to mask, by default 0.4
+        random_token_prob: float, optional
+            The chance of using a random AA token instead of the mask token
         """
         self.mask_prob = mask_prob
+        self.random_token_prob = random_token_prob
 
     def __call__(self, data: Data) -> Data:
         assert data.num_nodes is not None, "Ensure num_nodes for typing"
         data["residue_mask"] = torch.rand(data.num_nodes // 3) < self.mask_prob
         data["node_mask"] = data["residue_mask"].repeat_interleave(3)
         data["true_residue_type"] = data.residue_type[::3][data["residue_mask"]]
-        data.residue_type[data["node_mask"]] = ResidueType.MASK.value
+
+        # Here, we generate a random masking vector where we mask residues either with
+        # the mask token p=(1 - random_token_prob), or a randomly chosen AA in 1-20
+        num_masked_residues = data["residue_mask"].sum().item()
+        random_token = torch.randint(
+            low=1, high=21, size=(num_masked_residues,), dtype=torch.int32
+        )
+        mask_token = ResidueType.MASK.value * torch.ones_like(random_token)
+        reside_mask_tokens = torch.where(
+            torch.rand((num_masked_residues,)) < self.random_token_prob,
+            random_token,
+            mask_token,
+        )
+
+        data["residue_type"][data["node_mask"]] = reside_mask_tokens.repeat_interleave(
+            3
+        )
         return data
 
 

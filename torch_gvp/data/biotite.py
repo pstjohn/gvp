@@ -69,9 +69,6 @@ def convert_to_pyg(atom_stack: AtomArrayStack) -> torch_geometric.data.Data:
     """
 
     # For proteins where we have an NMR ensemble, we just take the first chain
-    # TODO: we need to fix residue indexing for proteins with multiple chains in a
-    # single structure
-
     atoms: AtomArray = atom_stack[0]  # type: ignore
     assert atoms.coord is not None  # for typing, not sure we'd expect this to be None
 
