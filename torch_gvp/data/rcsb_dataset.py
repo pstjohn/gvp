@@ -1,9 +1,9 @@
 import glob
-import multiprocessing
+import logging
 import os.path as osp
 from functools import partial
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Union
 
 import pandas as pd
 import torch
@@ -12,13 +12,20 @@ from tqdm import tqdm
 
 from torch_gvp.data.biotite import convert_to_pyg, load_bytes
 
+try:
+    import dask.dataframe as dd
+except ImportError:
+    dd = None
+
+logger = logging.getLogger(__name__)
+
 
 def process_item(
-    args: Tuple[str, bytes],
+    row: pd.Series,
     processed_dir: Union[str, Path],
     pre_filter: Optional[Callable] = None,
     pre_transform: Optional[Callable] = None,
-) -> None:
+) -> int:
     """Filter and process a database item, saving it to `{name}.pt`
 
     Parameters
@@ -35,16 +42,22 @@ def process_item(
         An optional `torch_geometric` transformation, by default None
 
     """
-    name, protein_data = args
-    data = convert_to_pyg(load_bytes(protein_data, compressed=True))
+    name, protein_data = row["_1"], row["_2"]
+
+    try:
+        data = convert_to_pyg(load_bytes(protein_data, compressed=True))
+    except Exception as ex:
+        logger.warning(f"Issue processing {name}: {str(ex)}")
+        return 0
 
     if pre_filter is not None and not pre_filter(data):
-        return
+        return 0
 
     if pre_transform is not None:
         data = pre_transform(data)
 
     torch.save(data, Path(processed_dir, f"prot-{name}.pt"))
+    return 1
 
 
 def size_filter(data: Data, max_num_nodes: int = 10000, min_num_nodes: int = 1) -> bool:
@@ -97,7 +110,7 @@ class RCSBDataset(Dataset):
     @property
     def files(self):
         if self._files is None:
-            self._files = glob.glob(osp.join(self.processed_dir, "prot*.pt"))
+            self._files = glob.glob(osp.join(self.processed_dir, "prot-*.pt"))
         return self._files
 
     @property
@@ -120,7 +133,10 @@ class RCSBDataset(Dataset):
 
     def process(self):
 
-        df = pd.read_parquet(Path(self.raw_dir, self._raw_filename))
+        existing_files = glob.glob(osp.join(self.processed_dir, "prot-*.pt"))
+        existing_ids = pd.Series(existing_files, dtype=str).str.extract(
+            ".*prot-(.*).pt$"
+        )[0]
 
         map_fn = partial(
             process_item,
@@ -129,11 +145,17 @@ class RCSBDataset(Dataset):
             pre_transform=self.pre_transform,
         )
 
-        if self.num_processes == 1:
-            for _ in tqdm(map(map_fn, df.values)):
-                continue
-            return
+        if dd is not None and self.num_processes != 1:
+            df = dd.read_parquet(  # type: ignore
+                Path(self.raw_dir, self._raw_filename), split_row_groups=True
+            )
+            df = df[~df["_1"].isin(existing_ids)]
+            df.map_partitions(
+                lambda x: x.apply(map_fn, axis=1), meta=pd.Series(dtype="float64")
+            ).compute()
 
-        with multiprocessing.Pool(self.num_processes) as pool:
-            for _ in tqdm(pool.imap_unordered(map_fn, df.values), total=len(df)):
-                continue
+        else:
+            tqdm.pandas()
+            df = pd.read_parquet(Path(self.raw_dir, self._raw_filename))
+            df = df[~df["_1"].isin(existing_ids)]
+            df.progress_apply(map_fn, axis=1)
