@@ -47,7 +47,7 @@ def test_residue_gvp(rcsb_loader, rotation, model, device):
             item.residue_index,
         )
 
-    assert s_out.shape[-1] == 20
+    assert s_out.shape[-1] == 21
     assert torch.allclose(s_out, s_out_prime, atol=1e-5, rtol=1e-4)
     assert s_out[item.residue_mask].shape[0] == item.true_residue_type.shape[0]
 

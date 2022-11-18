@@ -65,7 +65,8 @@ class ResidueGVP(nn.Module):
             gvp_layers.LayerNorm(edge_dims),
         )
 
-        self.masked_seq_head = GVP(node_dims, (20, 0), activations=(None, None))
+        # Need 21 output classes to handle the unknown token as well
+        self.masked_seq_head = GVP(node_dims, (21, 0), activations=(None, None))
 
     def forward(
         self,
@@ -90,12 +91,7 @@ class ResidueGVP(nn.Module):
             )
 
         node_s, node_v, edge_s, edge_v, edge_index = vector_mean_pool(
-            node_s,
-            node_v,
-            edge_s,
-            edge_v,
-            edge_index,
-            residue_index,
+            node_s, node_v, edge_s, edge_v, edge_index, residue_index,
         )
 
         for i in range(self.n_res_conv):

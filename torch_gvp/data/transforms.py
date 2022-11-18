@@ -64,8 +64,12 @@ class ResidueMask(BaseTransform):
         self.random_token_prob = random_token_prob
 
     def __call__(self, data: Data) -> Data:
+
+        device = data.pos.device
         assert data.num_nodes is not None, "Ensure num_nodes for typing"
-        data["residue_mask"] = torch.rand(data.num_nodes // 3) < self.mask_prob
+        data["residue_mask"] = (
+            torch.rand(data.num_nodes // 3, device=device) < self.mask_prob
+        )
         data["node_mask"] = data["residue_mask"].repeat_interleave(3)
         data["true_residue_type"] = data.residue_type[::3][data["residue_mask"]]
 
@@ -73,16 +77,22 @@ class ResidueMask(BaseTransform):
         # the mask token p=(1 - random_token_prob), or a randomly chosen AA in 1-20
         num_masked_residues = data["residue_mask"].sum().item()
         random_token = torch.randint(
-            low=1, high=21, size=(num_masked_residues,), dtype=torch.int32
+            low=1,
+            high=21,
+            size=(num_masked_residues,),
+            dtype=torch.int64,
+            device=device,
         )
-        mask_token = ResidueType.MASK.value * torch.ones_like(random_token)
-        reside_mask_tokens = torch.where(
-            torch.rand((num_masked_residues,)) < self.random_token_prob,
+        mask_token = ResidueType.MASK.value * torch.ones_like(
+            random_token, dtype=torch.int64, device=device
+        )
+        residue_mask_tokens = torch.where(
+            torch.rand((num_masked_residues,), device=device) < self.random_token_prob,
             random_token,
             mask_token,
         )
 
-        data["residue_type"][data["node_mask"]] = reside_mask_tokens.repeat_interleave(
+        data["residue_type"][data["node_mask"]] = residue_mask_tokens.repeat_interleave(
             3
         )
         return data

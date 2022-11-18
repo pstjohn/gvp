@@ -77,17 +77,23 @@ def convert_to_pyg(atom_stack: AtomArrayStack) -> torch_geometric.data.Data:
 
     atom_type = torch.tensor(
         [AtomType[name].value for name in atoms._annot["atom_name"][is_backbone]],
-        dtype=torch.int32,
+        dtype=torch.int64,
     )
+
+    assert is_backbone.sum() % 3 == 0, "number of backbone atoms must be divisible by 3"
+    num_residues = is_backbone.sum() // 3
+    assert torch.all(
+        atom_type == (1 + torch.arange(3)).repeat(num_residues)
+    ), "residue backbone atoms were not in the expected elemental order"
 
     residue_type = torch.tensor(
         [ResidueType[name].value for name in atoms._annot["res_name"][is_backbone]],
-        dtype=torch.int32,
+        dtype=torch.int64,
     )
 
-    residue_index = torch.arange(
-        0, atoms[is_backbone].shape[0] // 3, dtype=torch.int64  # type: ignore
-    ).repeat_interleave(3)
+    residue_index = torch.arange(0, num_residues, dtype=torch.int64).repeat_interleave(
+        3
+    )
 
     residue_discont = torch.as_tensor(
         check_res_id_continuity(atoms[is_backbone]), dtype=torch.int64

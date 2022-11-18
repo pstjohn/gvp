@@ -1,3 +1,5 @@
+import torch_geometric.transforms
+
 from torch_gvp.data.transforms import (
     NodeOrientation,
     ResidueMask,
@@ -11,14 +13,19 @@ def test_node_orientation(prot_data):
     assert data_xform.node_v.shape[-2:] == (2, 3)
 
 
-def test_residue_mask(prot_data):
-    xform = ResidueMask()
+def test_residue_mask(prot_data, device):
+    xform = torch_geometric.transforms.Compose(
+        [torch_geometric.transforms.ToDevice(device), ResidueMask()]
+    )
     data_xform = xform(prot_data)
 
     assert (
-        data_xform["residue_type"][data_xform["node_mask"]][::3].shape
-        == data_xform["true_residue_type"].shape
+        data_xform["residue_type"][data_xform["node_mask"]][::3].shape  # type: ignore
+        == data_xform["true_residue_type"].shape  # type: ignore
     )
+
+    assert data_xform.true_residue_type.max().item() <= 21
+    assert data_xform.true_residue_type.min().item() >= 1
 
 
 def test_transformer_stack(prot_data):
