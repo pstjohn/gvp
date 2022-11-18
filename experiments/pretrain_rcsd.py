@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from time import time
 
@@ -13,12 +14,7 @@ from torch_geometric.loader import DataLoader, DynamicBatchSampler
 from torchmetrics.text.perplexity import Perplexity
 
 from torch_gvp.data.rcsb_dataset import RCSBDataset, size_filter
-from torch_gvp.data.transforms import (
-    BaseTransform,
-    EdgeSplit,
-    NodeOrientation,
-    ResidueMask,
-)
+from torch_gvp.data.transforms import EdgeSplit, NodeOrientation, PinMemory, ResidueMask
 from torch_gvp.models.res_gvp import ResidueGVP
 
 logging.basicConfig(level=logging.INFO)
@@ -27,11 +23,6 @@ logger = logging.getLogger("__name__")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 logging.info("creating dataset object")
-
-
-class PinMemory(BaseTransform):
-    def __call__(self, data):
-        return data.pin_memory()
 
 
 pre_transform = torch_geometric.transforms.Compose(
@@ -56,11 +47,13 @@ post_transform = torch_geometric.transforms.Compose(
     ]
 )
 
+max_num_nodes = 30000
+
 dataset = RCSBDataset(
     "/projects/robustmicrob/pstjohn/rcsb/sample",
     pre_transform=pre_transform,
     transform=post_transform,
-    pre_filter=size_filter,
+    pre_filter=partial(size_filter, max_num_nodes=max_num_nodes),
     num_processes=1,
 )
 
@@ -86,7 +79,6 @@ train_dataset, valid_dataset = random_split(
 
 logging.info("Creating dataloader")
 
-max_num_nodes = 30000
 train_sampler = DynamicBatchSampler(
     train_dataset, max_num=max_num_nodes, mode="node", shuffle=True  # type: ignore
 )

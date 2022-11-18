@@ -13,6 +13,11 @@ from torch_geometric.transforms import BaseTransform
 from torch_gvp.data.residue import ResidueType
 
 
+class PinMemory(BaseTransform):
+    def __call__(self, data):
+        return data.pin_memory()
+
+
 def _normalize(tensor: torch.Tensor, dim=-1) -> torch.Tensor:
     """
     Normalizes a `torch.Tensor` along dimension `dim` without `nan`s.
